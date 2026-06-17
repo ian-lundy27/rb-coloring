@@ -1,0 +1,4 @@
+numpy==1.25.2
+pandas==3.0.3
+python_sat==1.9.dev5
+sympy==1.14.0
