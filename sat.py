@@ -99,7 +99,7 @@ if __name__=="__main__":
     # Gets VERY slow as number of colors increases, since every 3-permutation of colors is used for each (x,y,z) soln.
 
     # Hardcoded state
-    n, c = 200, 6
+    n, c = 289, 5
 
     # Take input from CLI if given
     if len(sys.argv) > 1:
