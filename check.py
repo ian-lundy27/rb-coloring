@@ -30,12 +30,14 @@ def check(n: int, sets: list[set], func: Callable = None):
     
     return False
 
+
 def _recover(n: int, s: set[int], v: int):
     # Gets a valid root of the quadratic residue, not necessarily unique
     for i in s:
         if (i ** 2) % n == v:
             return i
                     
+
 def _check(sets: list[set], func: Callable):
     # Less efficient, but custom. Doesn't consider commutativity
     for i in range(len(sets)):
@@ -47,6 +49,7 @@ def _check(sets: list[set], func: Callable):
                     return True, x, y, z
         return False
     
+
 def coloring(*colors: Iterable, n: int = 0):
     # Converts groups of numbers into a list of sets used by other functions
     # Optional arg n will add all unused numbers <n into their own distinct color
@@ -59,9 +62,28 @@ def coloring(*colors: Iterable, n: int = 0):
     return sets
 
 
+def symmetry(n: int, sets: list[set]):
+    result = list([True for i in range(len(sets))])
+    for i in range(len(sets)):
+        for j in sets[i]:
+            if (-j) % n not in sets[i]:
+                result[i] = False
+                break
+    return result
+
+
+def store(sets: list[set]):
+    return frozenset([frozenset(s) for s in sets])
+        
+
 if __name__=="__main__":
-    colors = coloring({2, 3, 4, 5, 6, 9, 10, 13, 14, 15, 16, 17}, {8, 11, 12, 7}, {1, 18})
-    print(check(19, colors))
+    # colors = coloring({2, 3, 4, 5, 6, 9, 10, 13, 14, 15, 16, 17}, {8, 11, 12, 7}, {1, 18})
+    # print(check(19, colors))
+    colors = coloring(
+        {5},
+        {6},
+        {0, 7, 66 % 13, 99 % 13, 132 % 13, 11, 77 % 13, 22 % 13, 55 % 13, 88 % 13, 121 % 13})
+    print(check(13, colors))
 
     '''
     n=343,c=6

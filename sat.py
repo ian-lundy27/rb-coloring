@@ -2,7 +2,7 @@ from itertools import permutations
 from pysat.formula import CNF, IDPool
 from pysat.solvers import Glucose42, Solver
 from time import time
-from check import symmetry
+from check import store, symmetry
 import pandas as pd
 import sys
 
@@ -123,23 +123,32 @@ if __name__=="__main__":
     print("Solving...", end=" ", flush=True)
     solution, solver, pool = solve(*prelim, Glucose42(use_timer=True))
 
+    # This is a mess of logic :(
     if count or _all:   # If we want to count all possible rainbow-free colorings
+        unique = set()
         i = 0
         colors = pool_to_colors(pool, solver) if solution else False
-        colors.sort(key=len)
-        if _all:
-            print()
-            for color in colors:
-                print(color)
-        while solution:
-            i += 1
-            solution = newsolve(solver)
-            if solution and _all:
-                colors = pool_to_colors(pool, solver)
-                colors.sort(key=len)
+        if colors:
+            i = 1
+            unique.add(store(colors))
+            colors.sort(key=len)
+            if _all:
                 print()
                 for color in colors:
                     print(color)
+        while solution:
+            solution = newsolve(solver)
+            if solution:
+                colors = pool_to_colors(pool, solver)
+                s = store(colors)
+                if s not in unique:
+                    i += 1
+                    unique.add(s)
+                    colors.sort(key=len)
+                    if _all:
+                        print()
+                        for color in colors:
+                            print(color)
   
         print(f"Found {i} solutions in {round(solver.time(), 2)}s. Total time: {round(time() - t,2)}s. ",end="")
         if count and colors:
