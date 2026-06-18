@@ -113,6 +113,7 @@ if __name__=="__main__":
         c = int(sys.argv[2])
     if len(sys.argv) > 3:
         count = sys.argv[3] in ("-count","-c")
+        _all = sys.argv[3] in ("-all","-a")
 
     t = time()
 
@@ -122,20 +123,32 @@ if __name__=="__main__":
     print("Solving...", end=" ", flush=True)
     solution, solver, pool = solve(*prelim, Glucose42(use_timer=True))
 
-    if count:   # If we want to count all possible rainbow-free colorings
+    if count or _all:   # If we want to count all possible rainbow-free colorings
         i = 0
         colors = pool_to_colors(pool, solver) if solution else False
+        colors.sort(key=len)
+        if _all:
+            print()
+            for color in colors:
+                print(color)
         while solution:
             i += 1
             solution = newsolve(solver)
+            if solution and _all:
+                colors = pool_to_colors(pool, solver)
+                colors.sort(key=len)
+                print()
+                for color in colors:
+                    print(color)
+  
         print(f"Found {i} solutions in {round(solver.time(), 2)}s. Total time: {round(time() - t,2)}s. ",end="")
-        if colors:
+        if count and colors:
             print("Example coloring:")
             for color in colors:
                 print(color)
 
     elif solution:  # Not counting all, just looking for a single rainbow-free coloring
-        print(f"Found solution in {round(solver.time(), 2)}s. Total time: {round(time() - t,2)}s. Coloring:")
+        print(f"Found a solution in {round(solver.time(), 2)}s. Total time: {round(time() - t,2)}s. Coloring:")
         for color in pool_to_colors(pool, solver):
             print(color)
 
