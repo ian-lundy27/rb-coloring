@@ -2,6 +2,7 @@ from itertools import permutations
 from pysat.formula import CNF, IDPool
 from pysat.solvers import Glucose42, Solver
 from time import time
+from check import symmetry
 import pandas as pd
 import sys
 
@@ -83,6 +84,10 @@ def solve(cnf: CNF, pool: IDPool, solver: Solver):
     result = solver.solve()
     return result, solver, pool
 
+def newsolve(solver: Solver):
+    solver.add_clause([-i for i in solver.get_model()])
+    return solver.solve()
+
 
 def get_from_csv(i: int, filepath: str = "rb.csv", delim: str = ";"):
     # Get the coloring sets for any number that's been calculated
@@ -99,13 +104,15 @@ if __name__=="__main__":
     # Gets VERY slow as number of colors increases, since every 3-permutation of colors is used for each (x,y,z) soln.
 
     # Hardcoded state
-    n, c = 289, 5
+    n, c, count = 289, 5, False
 
     # Take input from CLI if given
     if len(sys.argv) > 1:
         n = int(sys.argv[1])
     if len(sys.argv) > 2:
         c = int(sys.argv[2])
+    if len(sys.argv) > 3:
+        count = sys.argv[3] in ("-count","-c")
 
     t = time()
 
@@ -114,11 +121,25 @@ if __name__=="__main__":
 
     print("Solving...", end=" ", flush=True)
     solution, solver, pool = solve(*prelim, Glucose42(use_timer=True))
-    if solution:
+
+    if count:   # If we want to count all possible rainbow-free colorings
+        i = 0
+        colors = pool_to_colors(pool, solver) if solution else False
+        while solution:
+            i += 1
+            solution = newsolve(solver)
+        print(f"Found {i} solutions in {round(solver.time(), 2)}s. Total time: {round(time() - t,2)}s. ",end="")
+        if colors:
+            print("Example coloring:")
+            for color in colors:
+                print(color)
+
+    elif solution:  # Not counting all, just looking for a single rainbow-free coloring
         print(f"Found solution in {round(solver.time(), 2)}s. Total time: {round(time() - t,2)}s. Coloring:")
         for color in pool_to_colors(pool, solver):
             print(color)
-    else:
+
+    else:   # No rainbow-free colorings
         print(f"No valid coloring found in {round(solver.time(), 2)}s. Total time: {round(time() - t,2)}s.")
 
 '''
