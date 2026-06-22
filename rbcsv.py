@@ -113,7 +113,5 @@ class Colorings:
 
 if __name__=="__main__":
     c = Colorings()
-    # c.np(2,3,5,7,11,13,17)
-    # c.print()
-    c.sort_colorings(minimum=True,size=True)
-    c.write()
+    c.np(2,3,5,7,11,13,17,19,23)
+    c.print()

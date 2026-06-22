@@ -104,7 +104,7 @@ if __name__=="__main__":
     # Gets VERY slow as number of colors increases, since every 3-permutation of colors is used for each (x,y,z) soln.
 
     # Hardcoded state
-    n, c, count = 289, 5, False
+    n, c, count, _all = 289, 5, False, False
 
     # Take input from CLI if given
     if len(sys.argv) > 1:
@@ -136,6 +136,7 @@ if __name__=="__main__":
                 print()
                 for color in colors:
                     print(color)
+                print(symmetry(n,colors))
         while solution:
             solution = newsolve(solver)
             if solution:
@@ -149,7 +150,8 @@ if __name__=="__main__":
                         print()
                         for color in colors:
                             print(color)
-  
+                        print(symmetry(n,colors))
+
         print(f"Found {i} solutions in {round(solver.time(), 2)}s. Total time: {round(time() - t,2)}s. ",end="")
         if count and colors:
             print("Example coloring:")
