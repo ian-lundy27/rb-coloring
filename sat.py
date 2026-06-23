@@ -116,7 +116,7 @@ def all_solutions(n: int, r: int):
 def rbk(filepath: str = "rbk.csv", log: bool = True, stop_at_half: bool = True):
     try:
         df = pd.read_csv(filepath, delimiter=";")
-        p, k = df.iloc[-1, 0], df.iloc[-1, 1] + 1           # Grab last entry, inc. k value 
+        p, k = int(df.iloc[-1, 0]), int(df.iloc[-1, 1]) + 1           # Grab last entry, inc. k value 
         if k >= p or (stop_at_half and k > (p - 1) / 2):    # If next k is too large, inc. p value
             p = nextprime(p)
             k = 2
@@ -125,7 +125,7 @@ def rbk(filepath: str = "rbk.csv", log: bool = True, stop_at_half: bool = True):
             file.write("p;k;rb;coloring\n") # Write labels
         p, k = 5, 2                         # Initial values
 
-    r = 3
+    r = 4
     coloring = [{0}, {i for i in range(1,p)}]
 
     with open(filepath, "a") as file:       # Write each rb-# result as we get it
@@ -133,6 +133,7 @@ def rbk(filepath: str = "rbk.csv", log: bool = True, stop_at_half: bool = True):
             while True:
                 print(f"Trying {r}-coloring of {p}, power {k}... ", end="", flush=True)
                 cnf, pool = setup(p, r, power=k)
+                print(f"{len(cnf.clauses)} clauses... ", end="", flush=True)
                 solution, solver, _ = solve(cnf, pool, Glucose42())
 
                 if solution:    # Try again with +1 color
@@ -162,6 +163,8 @@ def rbk(filepath: str = "rbk.csv", log: bool = True, stop_at_half: bool = True):
 
 if __name__=="__main__":
 
+    rbk()
+    quit()
     # Gets VERY slow as number of colors increases, since every 3-permutation of colors is used for each (x,y,z) soln.
 
     # Hardcoded state
