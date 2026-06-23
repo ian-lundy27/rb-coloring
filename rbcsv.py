@@ -17,6 +17,7 @@ def read(path: str = "rb.csv", delim: str = ";"):
     df["coloring"] = df["coloring"].transform(convert_setlist)
     return df
 
+
 def write(df: pd.DataFrame, path: str = "rb.csv", delim: str = ";"):
     df.to_csv(path, sep=delim, index=False)
 
@@ -152,7 +153,8 @@ class ColoringsK:
                        (self.df["k"] * 2 != self.df["p"] - 1) &
                        (self.df["k"] != self.df["p"] - 1) &
                        (self.df["rb"] != 4)][["p","k","rb"]]
-        
+    def write(self, path: str = "output.csv"):
+        write(self.recent, path)
 
 
 if __name__=="__main__":
@@ -160,8 +162,9 @@ if __name__=="__main__":
     # c.np(2,3,5,7,11,13,17,19,23)
     # c.ppow()
     # c.print()
+
     d = ColoringsK()
     # d.bigk()
-    df = d.nonfermatnonbig()
-    # print(df.describe())
+    d.nonfermatnonbig()
+    d.write()
     d.print()
