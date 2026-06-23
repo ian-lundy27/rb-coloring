@@ -2,10 +2,14 @@ from itertools import combinations, product
 from typing import Callable, Iterable
 
 
-def check(n: int, sets: list[set], func: Callable = None):
+def check(n: int, sets: list[set], func: Callable = None, all: bool = False):
     # Returns False if no coloring is found, otherwise returns valid triple (or whatever the callback returns)
     if func: # Only works with triples
         return _check(sets, func)
+    
+    # Get all solutions, only supported by default eq. x+y=z^2
+    if all:
+        arr = []
 
     # Ridiculously inefficient brute force approach
     # Much room for optimization wrt combining coloring and checking in order to do exhaustive search better
@@ -26,9 +30,12 @@ def check(n: int, sets: list[set], func: Callable = None):
             for x,y in product(s1, s2):
                 if (x + y) % n in squares[i]:   # If any produce a square we've computed, it's a solution
                     z = _recover(n, sets[i], (x + y) % n)
-                    return (x, y, z)
+                    if all:
+                        arr.append((x, y, z))
+                    else:
+                        return (x, y, z)
     
-    return False
+    return arr if all else False
 
 
 def _recover(n: int, s: set[int], v: int):
@@ -77,13 +84,8 @@ def store(sets: list[set]):
         
 
 if __name__=="__main__":
-    # colors = coloring({2, 3, 4, 5, 6, 9, 10, 13, 14, 15, 16, 17}, {8, 11, 12, 7}, {1, 18})
-    # print(check(19, colors))
-    colors = coloring(
-        {5},
-        {6},
-        {0, 7, 66 % 13, 99 % 13, 132 % 13, 11, 77 % 13, 22 % 13, 55 % 13, 88 % 13, 121 % 13})
-    print(check(13, colors))
+    colors = coloring({2, 3, 4, 5, 6, 9, 10, 13, 14, 15, 16, 17}, {8, 11, 12, 7}, {1, 18})
+    print(check(19, colors))
 
     '''
     n=343,c=6

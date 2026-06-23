@@ -69,9 +69,9 @@ def np(df: pd.DataFrame, *n: int):
     return pd.DataFrame(rows, dtype="Int64")
 
 
-def _recent(cls: type["Colorings"]):
+def _recent(cls: type["Colorings"] | type["ColoringsK"]):
     def make_wrapper(func):
-        def wrapper(self: "Colorings", *args, **kwargs):
+        def wrapper(self: "Colorings" | "ColoringsK", *args, **kwargs):
             result = func(self, *args, **kwargs)
             if type(result) is pd.DataFrame:
                 self.recent = result
@@ -110,8 +110,50 @@ class Colorings:
         i = kwargs.pop("index",False)
         print(None if self.recent is None else self.recent.to_string(index=i, **kwargs))
 
+@_recent
+class ColoringsK:
+    df: pd.DataFrame
+    recent: pd.DataFrame | None = None
+
+    def __init__(self, df: pd.DataFrame = None, path: str = "rbk.csv"):
+        self.df = df if df else read(path)
+    def print(self, **kwargs):
+        kwargs["float_format"] = lambda x: f"{int(x)}"
+        kwargs["na_rep"] = ""
+        Colorings.print(self, **kwargs)
+    def get(self, p: int, k: int = 0):
+        if not k: k == math.floor((p - 1) / 2)
+        return self.df[(self.df["p"] == p) & (self.df["k"] == k)]
+    def rb(self, p: int, k: int = 0):
+        return self.get(p, k)["rb"].item()
+    def coloring(self, p: int, k: int = 0):
+        return self.get(p, k)["coloring"].item()
+    def allpow(self, p: int):
+        return self.df[self.df["p"] == p][["k", "rb"]]
+    def bigpow(self, p: int):
+        return self.df[(self.df["p"] == p) & 
+                       ((self.df["k"] == 2) | 
+                        (self.df["k"] == math.floor((p - 1) / 2)) |
+                        (self.df["k"] == p - 1))][["k","rb"]]
+    def allk(self, k: int):
+        return self.df[(self.df["k"] == k)][["p","rb"]]
+    def bigk(self):
+        df = self.df[(self.df["k"] == 2) |
+                       (self.df["k"] * 2 == self.df["p"] - 1) |
+                       (self.df["k"] == self.df["p"] - 1)][["p", "k", "rb"]]
+        df["i"] = df.groupby("p").cumcount()
+        df = df.pivot(index="p", columns="i", values="rb").reset_index()
+        df.columns = ["p", "2", "p-1/2", "p-1"]
+        df.loc[df["p"] == 5, "p-1"] = 3 # Hardcode fix to issue w/ 5, since 2=p-1/2
+        return df
+        
+
 
 if __name__=="__main__":
-    c = Colorings()
-    c.np(2,3,5,7,11,13,17,19,23)
-    c.print()
+    # c = Colorings()
+    # c.np(2,3,5,7,11,13,17,19,23)
+    # c.ppow()
+    # c.print()
+    d = ColoringsK()
+    d.bigk()
+    d.print()
