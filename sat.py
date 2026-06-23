@@ -7,6 +7,7 @@ from check import store, symmetry
 from sympy import nextprime
 import pandas as pd
 import sys
+import argparse
 
 
 def solutions(n: int, power: int = 2):
@@ -156,33 +157,34 @@ def rbk(filepath: str = "rbk.csv", log: bool = True, stop_at_half: bool = True):
                         k = 2
                     coloring = [{0},{i for i in range(1,p)}]
 
-        except:
+        except KeyboardInterrupt:
             print(f"Exited during {r}-coloring of {p}, power {k}")
             file.flush()
 
+        '''rb(Z_127,x+y=z^63) >= 15'''
+
+
+def parseargs():
+    parser = argparse.ArgumentParser(description="Compute r-coloring mod n with equation x+y=z^k.")
+    parser.add_argument("n", type=int, help="Modulus", nargs="?", default=13)
+    parser.add_argument("r", type=int, help="Number of colors", nargs="?", default=3)
+    parser.add_argument("-k","--power", type=int, action="store", default=2, help="Value of k in x+y=z^k")
+    parser.add_argument("-c","--count", action="store_true", help="Print total number of rainbow-free r-colorings")
+    parser.add_argument("-a","--all", action="store_true", help="Print each rainbow-free coloring, overrides count")
+    return parser.parse_args()
 
 if __name__=="__main__":
 
-    rbk()
-    quit()
     # Gets VERY slow as number of colors increases, since every 3-permutation of colors is used for each (x,y,z) soln.
+    args = parseargs()
 
     # Hardcoded state
-    n, c, count, _all = 289, 5, False, False
-
-    # Take input from CLI if given
-    if len(sys.argv) > 1:
-        n = int(sys.argv[1])
-    if len(sys.argv) > 2:
-        c = int(sys.argv[2])
-    if len(sys.argv) > 3:
-        count = sys.argv[3] in ("-count","-c")
-        _all = sys.argv[3] in ("-all","-a")
+    n, c, count, _all = args.n, args.r, args.count, args.all
 
     t = time()
 
     print(f"Setting up {c}-coloring of {n}...", end=" ", flush=True)
-    prelim = setup(n, c)
+    prelim = setup(n, c, power=args.power)
 
     print("Solving...", end=" ", flush=True)
     solution, solver, pool = solve(*prelim, Glucose42(use_timer=True))
