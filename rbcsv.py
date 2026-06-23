@@ -71,7 +71,7 @@ def np(df: pd.DataFrame, *n: int):
 
 def _recent(cls: type["Colorings"] | type["ColoringsK"]):
     def make_wrapper(func):
-        def wrapper(self: "Colorings" | "ColoringsK", *args, **kwargs):
+        def wrapper(self: "Colorings | ColoringsK", *args, **kwargs):
             result = func(self, *args, **kwargs)
             if type(result) is pd.DataFrame:
                 self.recent = result
