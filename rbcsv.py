@@ -146,6 +146,12 @@ class ColoringsK:
         df.columns = ["p", "2", "p-1/2", "p-1"]
         df.loc[df["p"] == 5, "p-1"] = 3 # Hardcode fix to issue w/ 5, since 2=p-1/2
         return df
+    def nonfermatnonbig(self):
+        return self.df[(self.df["p"] >= 7) &
+                       (self.df["p"] != 17) &
+                       (self.df["k"] * 2 != self.df["p"] - 1) &
+                       (self.df["k"] != self.df["p"] - 1) &
+                       (self.df["rb"] != 4)][["p","k","rb"]]
         
 
 
@@ -155,5 +161,7 @@ if __name__=="__main__":
     # c.ppow()
     # c.print()
     d = ColoringsK()
-    d.bigk()
+    # d.bigk()
+    df = d.nonfermatnonbig()
+    # print(df.describe())
     d.print()

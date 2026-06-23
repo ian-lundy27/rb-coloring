@@ -2,7 +2,7 @@ from itertools import combinations, product
 from typing import Callable, Iterable
 
 
-def check(n: int, sets: list[set], func: Callable = None, all: bool = False):
+def check(n: int, sets: list[set], func: Callable = None, all: bool = False, power: int = 2):
     # Returns False if no coloring is found, otherwise returns valid triple (or whatever the callback returns)
     if func: # Only works with triples
         return _check(sets, func)
@@ -20,7 +20,7 @@ def check(n: int, sets: list[set], func: Callable = None, all: bool = False):
     squares = list([set() for i in sets])
     for i in range(colors):
         for j in sets[i]:
-            squares[i].add((j ** 2) % n)
+            squares[i].add((j ** power) % n)
 
     # Plug in every triple to check for rainbow solution
     for i in range(colors):     # This is our z color
@@ -29,7 +29,7 @@ def check(n: int, sets: list[set], func: Callable = None, all: bool = False):
         for s1, s2 in combinations(_sets, 2):   # Grab every pair of sets
             for x,y in product(s1, s2):
                 if (x + y) % n in squares[i]:   # If any produce a square we've computed, it's a solution
-                    z = _recover(n, sets[i], (x + y) % n)
+                    z = _recover(n, sets[i], (x + y) % n, power)
                     if all:
                         arr.append((x, y, z))
                     else:
@@ -38,10 +38,10 @@ def check(n: int, sets: list[set], func: Callable = None, all: bool = False):
     return arr if all else False
 
 
-def _recover(n: int, s: set[int], v: int):
+def _recover(n: int, s: set[int], v: int, power: int):
     # Gets a valid root of the quadratic residue, not necessarily unique
     for i in s:
-        if (i ** 2) % n == v:
+        if (i ** power) % n == v:
             return i
                     
 
