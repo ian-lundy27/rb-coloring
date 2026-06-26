@@ -1,4 +1,4 @@
-from itertools import permutations, product
+from itertools import product
 from pysat.formula import CNF, IDPool
 from pysat.solvers import Glucose42, Solver
 from time import time
@@ -9,23 +9,25 @@ import pandas as pd
 import argparse
 
 
-def solutions(n: int, power: int = 2):
+def solutions(n: int, stepped: int, power: int = 2):
     used = set()    # This is technically O(n^2) but is it slower than the O(n^3) approach of three ordered for loops?
+    shr = lambda x,y,z: shrink(stepped,n,x,y,z)
     for z in range(round((n+1)/2)):
         z2 = (z ** power) % n
         for x in range(n):
-            if x == z: continue
-            y = (z2 - x) % n
-            if y == z or y == x: continue
-            ordered = order(x,y,z)
+            if x == z: continue                     # Skip if equal
+            y = (z2 - x) % n                        # Get our y, all normal here
+            x,y,z = shr(x,y,z)                      # "Shrink" numbers: if step|x, treat it as symmetric, so only use smaller val, else use stepped val
+            if x == y or x == z or y == z: continue # Again skip equal nums since colors always equal
+            ordered = order(x,y,z)                  # Order them for hashing + encoding
             if ordered not in used:
                 used.add(ordered)
                 yield ordered
-            if z != 0:
-                ordered = order(x,y,(-z) % n)
-                if ordered not in used:
-                    used.add(ordered)
-                    yield ordered
+
+
+def shrink(step,n,x,y,z):
+    def s(x): return x if x % step == 0 else min(x,n-x)
+    return s(x), s(y), s(z)
 
 
 def order(x,y,z):
@@ -81,21 +83,30 @@ def setup(n: int, c: int, p: int, step: int = 1, power: int = 2):
         - (done) already changed solution generator
         - (done-ish, can be better) need to change the color skipping
             - is there a better way to do permutations here? think hard ._.
+    - idea for further optimization
+        - (done) for some solution (x,y,z) we map x -> min(x,-x) if x is non-step else x (do this for all x,y,z)
+        - (done) then we only color non-steps up to n/2 and steps normally
+            - (done) we would assume non-steps are symmetric
+            - this would allow for x=y or x=z or smth, but we just skip these? b/c symmetry
+        - (done-i think?) need to never use step-unit > n-1/2
+        - can still improve encoding by introducing smarter bounds based on # of step-units
+            - may not be worth it, worst case has 3 non-steps (c^3), most applicable case has 4c... that is 50 perms per soln, not bad to improve...
+            - also 3 step-units is impossible, so we skip encoding that at all
+            - maybe this is good
     '''
 
-    def monochromatic():
+    def monochromatic():    
+        cnf.append([id(1,0)])       # Handle 1, it only goes in first color
 
-        cnf.append([id(1,0)])     # Handle 1, it only goes in first color
-
-        for i in range(2,n):    # Only units first
-            if i % step == 0: continue
+        for i in range(2,int((n+1)/2)):     # Only step-units first (haha)
+            if i % step == 0: continue      # We only color up to n-1/2 since we shrink
             ids = id(i,0), id(i,1)
             cnf.append(ids)
             cnf.append((-ids[0], -ids[1]))
 
         for i in range(0,n,step):
             bound = round(i/step) + 2 + 1   # how many steps we've taken + first 2 colors + 1 for exclusive bound
-            ids = [id(i,color) for color in range(bound)]
+            ids = [id(i,color) for color in range(min(bound,c))]
             cnf.append(ids)                         # At least one of (i,color) must be used
             for j in range(len(ids)):
                 for k in range(j + 1, len(ids)):
@@ -103,7 +114,7 @@ def setup(n: int, c: int, p: int, step: int = 1, power: int = 2):
     
 
     def exact():
-        cnf.append([id(i,1) for i in range(n)]) # Some i must be colored 1 (we always give 1 color 0, so we don't need that)
+        cnf.append([id(i,1) for i in range(int((n+1)/2))]) # Some i must be colored 1 (we always give 1 color 0, so we don't need that). n+1/2 b/c shrinkage
         for color in range(2,c):                # Each color must be used at least once, only for valid i
             cnf.append([id(i,color) for i in range((color - 2) * step,n,step)])
 
@@ -116,13 +127,14 @@ def setup(n: int, c: int, p: int, step: int = 1, power: int = 2):
             return 2 if x % step != 0 else min(3 + int(x / step), c)
         
         for triple in solutions(n, power):
-            b1, b2, b3 = bound(*triple)
+            t1, t2, t3 = triple
+            b1, b2, b3 = bound(t1,t2,t3)
             for c0,c1,c2 in product(range(b1), range(b2), range(b3)):
                 if c0 == c1 or c0 == c2 or c1 == c2: continue
                 cnf.append([
-                    -id(triple[0],c0),
-                    -id(triple[1],c1),
-                    -id(triple[2],c2)
+                    -id(t1,c0),
+                    -id(t2,c1),
+                    -id(t3,c2)
                 ])
 
     monochromatic()
@@ -135,6 +147,7 @@ def solve(cnf: CNF, pool: IDPool, solver: Solver):
     solver.append_formula(cnf)
     result = solver.solve()
     return result, solver, pool
+
 
 def newsolve(solver: Solver):
     solver.add_clause([-i for i in solver.get_model()])
