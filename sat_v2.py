@@ -11,23 +11,28 @@ import argparse
 
 def solutions(n: int, stepped: int, power: int = 2):
     used = set()    # This is technically O(n^2) but is it slower than the O(n^3) approach of three ordered for loops?
-    shr = lambda x,y,z: shrink(stepped,n,x,y,z)
+    shr = lambda x,y,z,w: shrink(stepped,n,x,y,z,w)
     for z in range(round((n+1)/2)):
         z2 = (z ** power) % n
-        for x in range(n):
+        for x in range(n):  # TODO May be able to reduce this boundto n+1/2 since y serves as x TODO
             if x == z: continue                     # Skip if equal
             y = (z2 - x) % n                        # Get our y, all normal here
-            x,y,z = shr(x,y,z)                      # "Shrink" numbers: if step|x, treat it as symmetric, so only use smaller val, else use stepped val
+            x,y,z,nz = shr(x,y,z,n-z)                      # "Shrink" numbers: if step|x, treat it as symmetric, so only use smaller val, else use stepped val
             if x == y or x == z or y == z: continue # Again skip equal nums since colors always equal
             ordered = order(x,y,z)                  # Order them for hashing + encoding
             if ordered not in used:
                 used.add(ordered)
                 yield ordered
+            if x == nz or y == nz: continue
+            ordered = order(x,y,nz)
+            if ordered not in used:
+                used.add(ordered)
+                yield ordered
 
 
-def shrink(step,n,x,y,z):
+def shrink(step,n,x,y,z,w):
     def s(x): return x if x % step == 0 else min(x,n-x)
-    return s(x), s(y), s(z)
+    return s(x), s(y), s(z), s(w)
 
 
 def order(x,y,z):
@@ -51,11 +56,17 @@ def _id(pool: IDPool, i: int, color: int):
         return pool.id((i, color))
 
 
-def pool_to_colors(n: int, c: int, pool: IDPool, solver: Solver):
+def pool_to_colors(n: int, c: int, step: int, pool: IDPool, solver: Solver):
     # If solution found, reconstruct color sets
     model = set(solver.get_model())
     colors = list([set() for i in range(c)])
-    for i in range(n):
+    for i in range(int((n+1)/2)):
+        if i % step == 0: continue
+        for color in (0,1):
+            if _id(pool, i, color) in model:
+                colors[color].add(i)
+                colors[color].add(n-i)
+    for i in range(0,n,step):
         for color in range(c):
             if _id(pool, i, color) in model:
                 colors[color].add(i)
@@ -79,7 +90,7 @@ def setup(n: int, c: int, p: int, step: int = 1, power: int = 2):
         - (done) still need the only one color used
     - (done) exact
         - (done) fix the i's that can be some color
-    - solutions
+    - (done) solutions
         - (done) already changed solution generator
         - (done-ish, can be better) need to change the color skipping
             - is there a better way to do permutations here? think hard ._.
@@ -89,10 +100,24 @@ def setup(n: int, c: int, p: int, step: int = 1, power: int = 2):
             - (done) we would assume non-steps are symmetric
             - this would allow for x=y or x=z or smth, but we just skip these? b/c symmetry
         - (done-i think?) need to never use step-unit > n-1/2
-        - can still improve encoding by introducing smarter bounds based on # of step-units
+        - (done) can still improve encoding by introducing smarter bounds based on # of step-units
             - may not be worth it, worst case has 3 non-steps (c^3), most applicable case has 4c... that is 50 perms per soln, not bad to improve...
             - also 3 step-units is impossible, so we skip encoding that at all
             - maybe this is good
+    - assuming these changes work, i think step-unit optimization is mostly done, don't see any obvious changes that improve time efficiency/formula length
+    - possible avenue for improvement: better-defined "step". sometimes steps are congruent mod whatever rather than just being multiples of some power
+        - congruence may (prob. does) change depending on p and k, so would be more difficult
+    
+    ref: Setting up 8-coloring of 2401... Solving... Found a solution in 142.69s. Total time: 221.91s. Coloring:
+    if we improve here, happy, otherwise reverting
+    do expect longer setup time, but solve time should hopefully be faster
+    0.3 solution! 38.91 total! ^-^
+    but it produces rainbow solutions >:(
+    - are we skipping encoding solutions with the new bounds?
+        - yes, but that didn't solve the problem
+    - did the shrinkage introduce problems with encoding?
+    - are we reconstructing wrong?
+        - probably not
     '''
 
     def monochromatic():    
@@ -105,7 +130,7 @@ def setup(n: int, c: int, p: int, step: int = 1, power: int = 2):
             cnf.append((-ids[0], -ids[1]))
 
         for i in range(0,n,step):
-            bound = round(i/step) + 2 + 1   # how many steps we've taken + first 2 colors + 1 for exclusive bound
+            bound = int(i/step) + 2 + 1   # how many steps we've taken + first 2 colors + 1 for exclusive bound
             ids = [id(i,color) for color in range(min(bound,c))]
             cnf.append(ids)                         # At least one of (i,color) must be used
             for j in range(len(ids)):
@@ -120,21 +145,25 @@ def setup(n: int, c: int, p: int, step: int = 1, power: int = 2):
 
         
     def encode_solutions():
-        def bound(x,y,z):
-            return _b(x), _b(y), _b(z)
+        def bound(cnt,x,y,z):
+            return _b(cnt,x), _b(cnt,y), _b(cnt,z)
         
-        def _b(x):
-            return 2 if x % step != 0 else min(3 + int(x / step), c)
-        
-        for triple in solutions(n, power):
-            t1, t2, t3 = triple
-            b1, b2, b3 = bound(t1,t2,t3)
-            for c0,c1,c2 in product(range(b1), range(b2), range(b3)):
+        def _b(cnt,x):  # cnt=0 -> skip, cnt=1 -> step-nonunit is never in colors 0,1
+            return (0,1) if x % step != 0 else range(2 if cnt == 1 else 0, min(3 + int(x / step), c))
+
+        def _steps(x,y,z):
+            return x % step, y % step, z % step
+            
+        for triple in solutions(n, step, power):
+            steps = _steps(*triple)
+            cnt = steps.count(0)
+            if cnt == 0: continue   # all step-units, never possible
+            for c0,c1,c2 in product(*bound(cnt, *triple)):
                 if c0 == c1 or c0 == c2 or c1 == c2: continue
                 cnf.append([
-                    -id(t1,c0),
-                    -id(t2,c1),
-                    -id(t3,c2)
+                    -id(triple[0],c0),
+                    -id(triple[1],c1),
+                    -id(triple[2],c2)
                 ])
 
     monochromatic()
@@ -169,7 +198,7 @@ def all_solutions(n: int, r: int):
     prelim = setup(n, r)
     solution, solver, pool = solve(*prelim, Glucose42(use_timer=True))
     while solution:
-        coloring = pool_to_colors(n, r, pool, solver)
+        coloring = pool_to_colors(n, r, n, pool, solver)
         coloring.sort(key=min)
         coloring.sort(key=len)
         yield coloring
@@ -200,7 +229,7 @@ def rbk(filepath: str = "rbk.csv", log: bool = True, stop_at_half: bool = True):
                 solution, solver, _ = solve(cnf, pool, Glucose42())
 
                 if solution:    # Try again with +1 color
-                    coloring = pool_to_colors(p, r, pool, solver)   # Save example of best coloring
+                    coloring = pool_to_colors(p, r, p, pool, solver)   # Save example of best coloring
                     print(f"Found {r}-coloring of {p}, power {k}", end="" if log else "\n")
                     r += 1
                     if log: print(f" at {datetime.now()}")
@@ -244,6 +273,7 @@ if __name__=="__main__":
     # Hardcoded state
     p, k, c, count, _all, quiet = args.p, args.k, args.r, args.count, args.all, args.quiet
     n = p ** k
+    get_colors = lambda pool, solver: pool_to_colors(n, c, p ** args.step, pool, solver)
 
     t = time()
 
@@ -257,7 +287,7 @@ if __name__=="__main__":
     if count or _all:   # If we want to count all possible rainbow-free colorings
         unique = set()
         i = 0
-        colors = pool_to_colors(n, c, pool, solver) if solution else False
+        colors = get_colors(pool, solver) if solution else False
         if colors:
             i = 1
             unique.add(store(colors))
@@ -270,7 +300,7 @@ if __name__=="__main__":
         while solution:
             solution = newsolve(solver)
             if solution:
-                colors = pool_to_colors(n, c, pool, solver)
+                colors = get_colors(pool, solver)
                 s = store(colors)
                 if s not in unique:
                     i += 1
@@ -291,7 +321,7 @@ if __name__=="__main__":
     elif solution:  # Not counting all, just looking for a single rainbow-free coloring
         print(f"Found a solution in {round(solver.time(), 2)}s. Total time: {round(time() - t,2)}s. {'Coloring:' if not quiet else ''}")
         if not quiet:
-            for color in pool_to_colors(n, c, pool, solver):
+            for color in get_colors(pool, solver):
                 print(color)
 
     else:   # No rainbow-free colorings
