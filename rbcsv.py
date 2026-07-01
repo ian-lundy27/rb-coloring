@@ -3,6 +3,7 @@ import math
 import inspect
 from typing import Callable
 from sympy import primerange
+from sympy.ntheory import factorint
 
 
 def convert_setlist(setlist: str):
@@ -107,6 +108,15 @@ class Colorings:
         return get_rb(self.df, i)
     def coloring(self, i: int):
         return get_coloring(self.df, i)
+    def checkcomposites(self):
+        for _, row in self.df.iterrows():
+            factors = factorint(row["i"])
+            if len(factors) == 1: continue
+            factors = [p ** factors[p] for p in factors]
+            expected_rb = sum([self.rb(f) for f in factors]) - 2 * (len(factors) - 1)
+            if row["rb"] != expected_rb: print(row["i"], row["rb"], expected_rb)
+            else: print(row["i"],"good")
+
     def print(self, **kwargs):
         i = kwargs.pop("index",False)
         print(None if self.recent is None else self.recent.to_string(index=i, **kwargs))
@@ -158,13 +168,14 @@ class ColoringsK:
 
 
 if __name__=="__main__":
-    # c = Colorings()
-    # c.np(2,3,5,7,11,13,17,19,23)
+    c = Colorings()
+    c.np(3,9,27)
     # c.ppow()
     # c.print()
+    c.checkcomposites()
 
-    d = ColoringsK()
+    # d = ColoringsK()
     # d.bigk()
-    d.nonfermatnonbig()
-    d.write()
-    d.print()
+    # d.nonfermatnonbig()
+    # d.write()
+    # d.print()

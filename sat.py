@@ -171,6 +171,7 @@ def parseargs():
     parser.add_argument("-k","--power", type=int, action="store", default=2, help="Value of k in x+y=z^k")
     parser.add_argument("-c","--count", action="store_true", help="Print total number of rainbow-free r-colorings")
     parser.add_argument("-a","--all", action="store_true", help="Print each rainbow-free coloring, overrides count")
+    parser.add_argument("-q","--quiet", action="store_true", help="Print std updates, skip color printouts")
     return parser.parse_args()
 
 if __name__=="__main__":
@@ -179,7 +180,7 @@ if __name__=="__main__":
     args = parseargs()
 
     # Hardcoded state
-    n, c, count, _all = args.n, args.r, args.count, args.all
+    n, c, count, _all, quiet = args.n, args.r, args.count, args.all, args.quiet
 
     t = time()
 
@@ -198,7 +199,7 @@ if __name__=="__main__":
             i = 1
             unique.add(store(colors))
             colors.sort(key=len)
-            if _all:
+            if _all and not quiet:
                 print()
                 for color in colors:
                     print(color)
@@ -212,22 +213,23 @@ if __name__=="__main__":
                     i += 1
                     unique.add(s)
                     colors.sort(key=len)
-                    if _all:
+                    if _all and not quiet:
                         print()
                         for color in colors:
                             print(color)
                         print(symmetry(n,colors))
 
         print(f"Found {i} solutions in {round(solver.time(), 2)}s. Total time: {round(time() - t,2)}s. ",end="")
-        if count and colors:
+        if count and colors and not quiet:
             print("Example coloring:")
             for color in colors:
                 print(color)
 
     elif solution:  # Not counting all, just looking for a single rainbow-free coloring
-        print(f"Found a solution in {round(solver.time(), 2)}s. Total time: {round(time() - t,2)}s. Coloring:")
-        for color in pool_to_colors(n, c, pool, solver):
-            print(color)
+        print(f"Found a solution in {round(solver.time(), 2)}s. Total time: {round(time() - t,2)}s. {'Coloring:' if not quiet else ''}")
+        if not quiet:
+            for color in pool_to_colors(n, c, pool, solver):
+                print(color)
 
     else:   # No rainbow-free colorings
         print(f"No valid coloring found in {round(solver.time(), 2)}s. Total time: {round(time() - t,2)}s.")
